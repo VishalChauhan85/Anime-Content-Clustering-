@@ -109,14 +109,21 @@ def predict():
         text_blob = f"{synopsis} {genres}".strip()
         tfidf_vec = tfidf_vectorizer.transform([text_blob])
 
-        # ---- Numeric features (scaled) ----
-        # Order should match whatever you trained on; adjust as needed.
+        # ---- Numeric features (RAW) ----
         numeric_df = pd.DataFrame([numeric])
-        numeric_arr = standard_scaler.transform(numeric_df.values)
+        numeric_arr = numeric_df.values
 
-        # ---- Combine + PCA ----
-        combined = np.hstack([tfidf_vec.toarray(), numeric_arr])
-        reduced = pca_transformer.transform(combined)
+        # ---- Combine features FIRST (Now we have 55 features) ----
+        # NOTE: If you still get a shape error or weird predictions, 
+        # swap the order to np.hstack([numeric_arr, tfidf_vec.toarray()]) 
+        # depending on how you combined them in your Colab notebook.
+        combined_features = np.hstack([tfidf_vec.toarray(), numeric_arr])
+
+        # ---- Scale (Applied to all 55 features) ----
+        scaled_features = standard_scaler.transform(combined_features)
+
+        # ---- PCA ----
+        reduced = pca_transformer.transform(scaled_features)
 
         # ---- KMeans cluster ----
         cluster = int(kmeans_model.predict(reduced)[0])
@@ -158,5 +165,5 @@ def reload_models():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
