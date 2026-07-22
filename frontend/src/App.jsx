@@ -58,7 +58,7 @@ export default function App() {
   return (
     <div className="container">
       <header className="hero">
-        <span className="badge">ML • KMeans + TF-IDF + PCA</span>
+        <span className="badge"></span>
         <h1>Anime Cluster Predictor</h1>
         <p>Enter an anime's details and get its predicted cluster.</p>
       </header>
@@ -166,7 +166,7 @@ export default function App() {
         )}
       </div>
 
-      <p className="footer">Frontend: Vercel • Backend: Render</p>
+      <p className="footer"></p>
     </div>
   );
 }
