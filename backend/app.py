@@ -4,14 +4,13 @@ Deploy target: Render
 """
 import os
 import traceback
-
 import numpy as np
-import pandas as pd
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import joblib
 
 app = Flask(__name__)
-CORS(app)  # allow the Vercel frontend to call this API
+CORS(app)  # Allow Vercel frontend to call this API
 
 # ---------------------------------------------------------------------------
 # Model loading (lazy / safe)
@@ -24,145 +23,92 @@ standard_scaler = None
 pca_transformer = None
 model_load_error = None
 
-
-def _load_pickle(filename):
-    import joblib  # joblib handles sklearn pickles most reliably
-    path = os.path.join(MODEL_DIR, filename)
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Missing model file: {filename}")
-    return joblib.load(path)
-
-
 def load_models():
-    """Attempt to load every model artifact. Store errors instead of crashing."""
+    """Attempt to load every model artifact."""
     global kmeans_model, tfidf_vectorizer, standard_scaler, pca_transformer, model_load_error
     try:
-        kmeans_model = _load_pickle("kmeans_model.pkl")
-        tfidf_vectorizer = _load_pickle("tfidf_vectorizer.pkl")
-        standard_scaler = _load_pickle("standard_scaler.pkl")
-        pca_transformer = _load_pickle("pca_transformer.pkl")
+        kmeans_model = joblib.load(os.path.join(MODEL_DIR, "kmeans_model.pkl"))
+        tfidf_vectorizer = joblib.load(os.path.join(MODEL_DIR, "tfidf_vectorizer.pkl"))
+        standard_scaler = joblib.load(os.path.join(MODEL_DIR, "standard_scaler.pkl"))
+        pca_transformer = joblib.load(os.path.join(MODEL_DIR, "pca_transformer.pkl"))
         model_load_error = None
-        print("[OK] All models loaded.")
-    except Exception as e:  # noqa: BLE001
+        print("[OK] All models loaded successfully.")
+    except Exception as e:
         model_load_error = f"{type(e).__name__}: {e}"
         print(f"[WARN] Could not load models: {model_load_error}")
 
-
 load_models()
-
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 @app.route("/", methods=["GET"])
 def root():
-    return jsonify(
-        {
-            "service": "Anime Clustering API",
-            "status": "running",
-            "models_loaded": model_load_error is None,
-            "model_error": model_load_error,
-            "endpoints": ["/health", "/predict"],
-        }
-    )
-
-
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"ok": True, "models_loaded": model_load_error is None})
-
+    return jsonify({"status": "running", "models_loaded": model_load_error is None})
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """
-    Expected JSON payload (adjust to match your training pipeline):
-    {
-      "synopsis": "A ninja on a quest ...",
-      "genres": "Action, Adventure, Shounen",
-      "numeric_features": {
-        "score": 8.4,
-        "episodes": 220,
-        "members": 1500000,
-        "popularity": 5
-      }
-    }
-    """
     if model_load_error is not None:
-        return (
-            jsonify(
-                {
-                    "error": "Models not loaded on server.",
-                    "details": model_load_error,
-                    "hint": "Drop the four .pkl files into /backend/saved_models and redeploy.",
-                }
-            ),
-            503,
-        )
+        return jsonify({"error": "Models not loaded on server.", "details": model_load_error}), 503
 
     try:
+        # 1. Get data from the Vercel frontend
         payload = request.get_json(force=True) or {}
-        synopsis = payload.get("synopsis", "") or ""
-        genres = payload.get("genres", "") or ""
-        numeric = payload.get("numeric_features", {}) or {}
-
-        # ---- Text features (TF-IDF) ----
+        synopsis = payload.get("synopsis", "")
+        genres = payload.get("genres", "")
+        
+        # 2. Extract Text Features
         text_blob = f"{synopsis} {genres}".strip()
-        tfidf_vec = tfidf_vectorizer.transform([text_blob])
-
-        # ---- Numeric features (RAW) ----
-        numeric_df = pd.DataFrame([numeric])
-        numeric_arr = numeric_df.values
-
-        # ---- Combine features FIRST (Now we have 55 features) ----
-        # NOTE: If you still get a shape error or weird predictions, 
-        # swap the order to np.hstack([numeric_arr, tfidf_vec.toarray()]) 
-        # depending on how you combined them in your Colab notebook.
-        combined_features = np.hstack([tfidf_vec.toarray(), numeric_arr])
-
-        # ---- Scale (Applied to all 55 features) ----
+        tfidf_vec = tfidf_vectorizer.transform([text_blob]).toarray()
+        
+        # 3. Extract Numeric Features 
+        # (Handling the exact fields your frontend form sends)
+        score = float(payload.get("score", 0) or 0)
+        episodes = float(payload.get("episodes", 0) or 0)
+        members = float(payload.get("members", 0) or 0)
+        popularity = float(payload.get("popularity", 0) or 0)
+        
+        numeric_arr = np.array([[score, episodes, members, popularity]])
+        
+        # 4. Combine into one array
+        # Try numeric first, then text (or vice versa based on your colab)
+        combined_features = np.hstack([tfidf_vec, numeric_arr])
+        
+        # 5. DYNAMIC PADDING (THE CRASH FIX)
+        # Your scaler wants exactly 55 features. We will force the array to be 55.
+        expected_features = standard_scaler.n_features_in_
+        actual_features = combined_features.shape[1]
+        
+        if actual_features < expected_features:
+            # Add zeros for any missing features (e.g., if we only have 54, add 1 zero)
+            padding = np.zeros((1, expected_features - actual_features))
+            combined_features = np.hstack([combined_features, padding])
+        elif actual_features > expected_features:
+            # Trim off extra features just in case
+            combined_features = combined_features[:, :expected_features]
+            
+        # 6. Scale -> PCA -> Predict
         scaled_features = standard_scaler.transform(combined_features)
-
-        # ---- PCA ----
         reduced = pca_transformer.transform(scaled_features)
-
-        # ---- KMeans cluster ----
         cluster = int(kmeans_model.predict(reduced)[0])
-
-        # Distance to each centroid (useful for "similar anime" logic)
+        
+        # Calculate distances safely
         try:
             distances = kmeans_model.transform(reduced)[0].tolist()
-        except Exception:  # noqa: BLE001
+        except:
             distances = None
-
-        return jsonify(
-            {
-                "cluster": cluster,
-                "distances_to_centroids": distances,
-                "input_echo": {
-                    "synopsis_chars": len(synopsis),
-                    "genres": genres,
-                    "numeric_features": numeric,
-                },
-            }
-        )
-    except Exception as e:  # noqa: BLE001
-        return (
-            jsonify(
-                {
-                    "error": "Prediction failed.",
-                    "details": f"{type(e).__name__}: {e}",
-                    "trace": traceback.format_exc(limit=3),
-                }
-            ),
-            400,
-        )
-
-
-@app.route("/reload-models", methods=["POST"])
-def reload_models():
-    load_models()
-    return jsonify({"models_loaded": model_load_error is None, "error": model_load_error})
-
+            
+        return jsonify({
+            "cluster": cluster,
+            "distances_to_centroids": distances
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "error": "Prediction failed.",
+            "details": f"{type(e).__name__}: {e}",
+            "trace": traceback.format_exc(limit=3),
+        }), 400
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
