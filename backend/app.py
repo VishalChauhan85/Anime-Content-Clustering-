@@ -61,20 +61,20 @@ def predict():
         text_blob = f"{synopsis} {genres}".strip()
         tfidf_vec = tfidf_vectorizer.transform([text_blob]).toarray()
         
-        # 3. Extract Numeric Features 
-        # (Handling the exact fields your frontend form sends)
-        score = float(payload.get("score", 0) or 0)
-        episodes = float(payload.get("episodes", 0) or 0)
-        members = float(payload.get("members", 0) or 0)
-        popularity = float(payload.get("popularity", 0) or 0)
+        # 3. THE FIX: Extract Numeric Features from the nested dictionary
+        numeric_data = payload.get("numeric_features", {})
+        
+        score = float(numeric_data.get("score", 0) or 0)
+        episodes = float(numeric_data.get("episodes", 0) or 0)
+        members = float(numeric_data.get("members", 0) or 0)
+        popularity = float(numeric_data.get("popularity", 0) or 0)
         
         numeric_arr = np.array([[score, episodes, members, popularity]])
         
         # 4. Combine into one array
-        # Try numeric first, then text (or vice versa based on your colab)
         combined_features = np.hstack([tfidf_vec, numeric_arr])
         
-        # 5. DYNAMIC PADDING (THE CRASH FIX)
+        # 5. DYNAMIC PADDING
         # Your scaler wants exactly 55 features. We will force the array to be 55.
         expected_features = standard_scaler.n_features_in_
         actual_features = combined_features.shape[1]
