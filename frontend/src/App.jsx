@@ -16,7 +16,6 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // State to toggle raw JSON data visibility
   const [showRaw, setShowRaw] = useState(false); 
 
   const update = (k) => (e) =>
@@ -30,7 +29,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     setResult(null);
-    setShowRaw(false); // Reset toggle on new prediction
+    setShowRaw(false); 
     try {
       const res = await fetch(`${API_URL}/predict`, {
         method: "POST",
@@ -118,9 +117,10 @@ export default function App() {
             
             <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '30px', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
               <span className="badge" style={{ marginBottom: '15px', display: 'inline-block' }}>Assigned Group</span>
-              <div className="cluster-num" style={{ fontSize: '4rem', margin: '0', lineHeight: '1' }}>#{result.cluster}</div>
               
-              {/* Added Cluster Names */}
+              {/* THE FIX: Output is now strictly #1, #2, #3, or #4 */}
+              <div className="cluster-num" style={{ fontSize: '4rem', margin: '0', lineHeight: '1' }}>#{result.cluster + 1}</div>
+              
               <h2 style={{ color: '#818cf8', marginTop: '15px', fontSize: '1.8rem', fontWeight: 'bold' }}>
                 {result.cluster === 0 && "The Mainstream Titans"}
                 {result.cluster === 1 && "Heart & Home"}
@@ -148,7 +148,6 @@ export default function App() {
                </p>
             </div>
 
-            {/* View Raw Data Button */}
             <button 
               type="button" 
               onClick={() => setShowRaw(!showRaw)}
@@ -157,7 +156,6 @@ export default function App() {
               {showRaw ? "Hide Raw Data" : "View Raw Data (For Developers)"}
             </button>
 
-            {/* Hidden Raw JSON Box */}
             {showRaw && (
               <div style={{ marginTop: '15px', textAlign: 'left', background: '#0f172a', padding: '15px', borderRadius: '8px', overflowX: 'auto', border: '1px solid #1e293b' }}>
                 <pre style={{ margin: 0, fontSize: '0.8rem', color: '#a5b4fc' }}>{JSON.stringify(result, null, 2)}</pre>
