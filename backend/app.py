@@ -68,14 +68,26 @@ def predict():
         members = float(numeric_data.get("members", 0) or 0)
         popularity = float(numeric_data.get("popularity", 0) or 0)
         
-        # THE FIX: TFIDF provides 50 features. Scaler expects 55.
-        # We manually add a 0.0 here for the 5th missing numeric feature so the array stays aligned.
-        numeric_arr = np.array([[score, episodes, members, popularity, 0.0]])
+        # Base numeric array with just the 4 inputs from the frontend
+        numeric_arr = np.array([[score, episodes, members, popularity]])
         
-        # 4. Combine into one array (Exactly 55 features)
+        # 4. Combine into one array
         combined_features = np.hstack([tfidf_vec, numeric_arr])
         
-        # 5. Scale -> PCA -> Predict
+        # 5. THE ULTIMATE SHAPE FIX (Dynamic Padding)
+        # This asks the scaler exactly what it expects (55) and forces the array to match.
+        expected_features = standard_scaler.n_features_in_
+        actual_features = combined_features.shape[1]
+        
+        if actual_features < expected_features:
+            # If we only have 51 features, this adds exactly 4 zeros to reach 55
+            padding = np.zeros((1, expected_features - actual_features))
+            combined_features = np.hstack([combined_features, padding])
+        elif actual_features > expected_features:
+            # If we somehow have too many, trim the excess
+            combined_features = combined_features[:, :expected_features]
+            
+        # 6. Scale -> PCA -> Predict
         scaled_features = standard_scaler.transform(combined_features)
         reduced = pca_transformer.transform(scaled_features)
         cluster = int(kmeans_model.predict(reduced)[0])
