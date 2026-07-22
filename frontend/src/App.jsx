@@ -108,11 +108,26 @@ export default function App() {
         )}
 
         {result && (
-          <div className="result">
-            <span className="badge">Predicted cluster</span>
-            <div className="cluster-num">#{result.cluster}</div>
-            <p className="muted">Raw response:</p>
-            <pre>{JSON.stringify(result, null, 2)}</pre>
+          <div className="result" style={{ marginTop: '2rem', textAlign: 'center' }}>
+            <h2 style={{ marginBottom: '10px' }}>🎉 Prediction Complete!</h2>
+            <p className="muted" style={{ marginBottom: '20px' }}>Based on its features, this anime belongs to:</p>
+            
+            <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '30px', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+              <span className="badge" style={{ marginBottom: '15px', display: 'inline-block' }}>Assigned Group</span>
+              <div className="cluster-num" style={{ fontSize: '4rem', margin: '0', lineHeight: '1' }}>#{result.cluster}</div>
+            </div>
+
+            <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '8px', textAlign: 'left' }}>
+               <h3 style={{ fontSize: '1.2rem', marginBottom: '10px', color: '#e2e8f0' }}>What does this mean?</h3>
+               <p style={{ color: '#94a3b8', lineHeight: '1.6', fontSize: '0.95rem' }}>
+                 {result.cluster === 0 && "This cluster typically groups highly popular Action/Shounen titles with massive member counts."}
+                 {result.cluster === 1 && "Anime in this cluster are often Slice-of-Life, Romance, or School-themed series."}
+                 {result.cluster === 2 && "This group usually contains deep Sci-Fi, Psychological, or mature Drama shows."}
+                 {result.cluster === 3 && "This cluster tends to feature Fantasy, Magic, or expansive Adventure themes."}
+                 {result.cluster === 4 && "Often includes niche, short-form, or classic older titles with specific audiences."}
+                 {result.cluster > 4 && "This anime falls into a unique or highly specific cluster based on the features provided."}
+               </p>
+            </div>
           </div>
         )}
       </div>
