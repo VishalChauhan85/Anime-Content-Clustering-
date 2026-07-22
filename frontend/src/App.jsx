@@ -15,6 +15,9 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  
+  // New state to toggle raw JSON data visibility
+  const [showRaw, setShowRaw] = useState(false); 
 
   const update = (k) => (e) =>
     setForm((f) => ({
@@ -27,6 +30,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setShowRaw(false); // Reset toggle on new prediction
     try {
       const res = await fetch(`${API_URL}/predict`, {
         method: "POST",
@@ -117,22 +121,50 @@ export default function App() {
               <div className="cluster-num" style={{ fontSize: '4rem', margin: '0', lineHeight: '1' }}>#{result.cluster}</div>
             </div>
 
-            <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '8px', textAlign: 'left' }}>
-               <h3 style={{ fontSize: '1.2rem', marginBottom: '10px', color: '#e2e8f0' }}>What does this mean?</h3>
-               <p style={{ color: '#94a3b8', lineHeight: '1.6', fontSize: '0.95rem' }}>
-                 {result.cluster === 0 && "This cluster typically groups highly popular Action/Shounen titles with massive member counts."}
-                 {result.cluster === 1 && "Anime in this cluster are often Slice-of-Life, Romance, or School-themed series."}
-                 {result.cluster === 2 && "This group usually contains deep Sci-Fi, Psychological, or mature Drama shows."}
-                 {result.cluster === 3 && "This cluster tends to feature Fantasy, Magic, or expansive Adventure themes."}
-                 {result.cluster === 4 && "Often includes niche, short-form, or classic older titles with specific audiences."}
+            <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '8px', textAlign: 'left', marginBottom: '20px' }}>
+               <h3 style={{ fontSize: '1.2rem', marginBottom: '10px', color: '#e2e8f0' }}>What kind of anime are in this group?</h3>
+               
+               <p style={{ color: '#94a3b8', lineHeight: '1.6', fontSize: '0.95rem', marginBottom: '15px' }}>
+                 {result.cluster === 0 && "This cluster groups highly popular Action/Shounen titles with massive member counts. You'll find epic battles and long-running storylines here."}
+                 {result.cluster === 1 && "Anime in this cluster are often Slice-of-Life, Romance, or School-themed. These are character-driven, emotional, or comedic series."}
+                 {result.cluster === 2 && "This group usually contains deep Sci-Fi, Psychological, or mature Drama shows. Expect complex plots and serious themes."}
+                 {result.cluster === 3 && "This cluster tends to feature Fantasy, Magic, or expansive Adventure themes set in different worlds."}
+                 {result.cluster === 4 && "Often includes niche, short-form, or classic older titles with highly dedicated fanbases."}
                  {result.cluster > 4 && "This anime falls into a unique or highly specific cluster based on the features provided."}
                </p>
+
+               <h4 style={{ color: '#c7d2fe', marginBottom: '5px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Examples of Similar Anime:</h4>
+               <p style={{ color: '#fff', fontWeight: 'bold', fontSize: '1rem' }}>
+                 {result.cluster === 0 && "Naruto, Bleach, One Piece, Dragon Ball Z"}
+                 {result.cluster === 1 && "Toradora!, Clannad, K-On!, Your Lie in April"}
+                 {result.cluster === 2 && "Steins;Gate, Death Note, Psycho-Pass, Monster"}
+                 {result.cluster === 3 && "Fullmetal Alchemist, Hunter x Hunter, Sword Art Online"}
+                 {result.cluster === 4 && "Mushishi, Cowboy Bebop, Neon Genesis Evangelion"}
+                 {result.cluster > 4 && "Data specific titles..."}
+               </p>
             </div>
+
+            {/* View Raw Data Button */}
+            <button 
+              type="button" 
+              onClick={() => setShowRaw(!showRaw)}
+              style={{ background: 'transparent', border: '1px solid #4b5563', padding: '8px 16px', borderRadius: '6px', color: '#9ca3af', cursor: 'pointer', fontSize: '0.85rem', width: 'auto' }}
+            >
+              {showRaw ? "Hide Raw Data" : "View Raw Data (For Developers)"}
+            </button>
+
+            {/* Hidden Raw JSON Box */}
+            {showRaw && (
+              <div style={{ marginTop: '15px', textAlign: 'left', background: '#0f172a', padding: '15px', borderRadius: '8px', overflowX: 'auto', border: '1px solid #1e293b' }}>
+                <pre style={{ margin: 0, fontSize: '0.8rem', color: '#a5b4fc' }}>{JSON.stringify(result, null, 2)}</pre>
+              </div>
+            )}
+            
           </div>
         )}
       </div>
 
-      <p className="footer">Frontend: Vercel • Backend: Render</p>
+      <p className="footer"></p>
     </div>
   );
 }
