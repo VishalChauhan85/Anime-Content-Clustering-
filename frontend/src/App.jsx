@@ -16,7 +16,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   
-  // New state to toggle raw JSON data visibility
+  // State to toggle raw JSON data visibility
   const [showRaw, setShowRaw] = useState(false); 
 
   const update = (k) => (e) =>
@@ -119,6 +119,14 @@ export default function App() {
             <div style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '30px', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
               <span className="badge" style={{ marginBottom: '15px', display: 'inline-block' }}>Assigned Group</span>
               <div className="cluster-num" style={{ fontSize: '4rem', margin: '0', lineHeight: '1' }}>#{result.cluster}</div>
+              
+              {/* Added Cluster Names */}
+              <h2 style={{ color: '#818cf8', marginTop: '15px', fontSize: '1.8rem', fontWeight: 'bold' }}>
+                {result.cluster === 0 && "The Mainstream Titans"}
+                {result.cluster === 1 && "Heart & Home"}
+                {result.cluster === 2 && "The Deep Thinkers"}
+                {result.cluster === 3 && "Epic Fantasy Quests"}
+              </h2>
             </div>
 
             <div style={{ backgroundColor: 'rgba(0,0,0,0.2)', padding: '20px', borderRadius: '8px', textAlign: 'left', marginBottom: '20px' }}>
@@ -129,8 +137,6 @@ export default function App() {
                  {result.cluster === 1 && "Anime in this cluster are often Slice-of-Life, Romance, or School-themed. These are character-driven, emotional, or comedic series."}
                  {result.cluster === 2 && "This group usually contains deep Sci-Fi, Psychological, or mature Drama shows. Expect complex plots and serious themes."}
                  {result.cluster === 3 && "This cluster tends to feature Fantasy, Magic, or expansive Adventure themes set in different worlds."}
-                 {result.cluster === 4 && "Often includes niche, short-form, or classic older titles with highly dedicated fanbases."}
-                 {result.cluster > 4 && "This anime falls into a unique or highly specific cluster based on the features provided."}
                </p>
 
                <h4 style={{ color: '#c7d2fe', marginBottom: '5px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Examples of Similar Anime:</h4>
@@ -139,8 +145,6 @@ export default function App() {
                  {result.cluster === 1 && "Toradora!, Clannad, K-On!, Your Lie in April"}
                  {result.cluster === 2 && "Steins;Gate, Death Note, Psycho-Pass, Monster"}
                  {result.cluster === 3 && "Fullmetal Alchemist, Hunter x Hunter, Sword Art Online"}
-                 {result.cluster === 4 && "Mushishi, Cowboy Bebop, Neon Genesis Evangelion"}
-                 {result.cluster > 4 && "Data specific titles..."}
                </p>
             </div>
 
@@ -164,7 +168,7 @@ export default function App() {
         )}
       </div>
 
-      <p className="footer"></p>
+      <p className="footer">Frontend: Vercel • Backend: Render</p>
     </div>
   );
 }
