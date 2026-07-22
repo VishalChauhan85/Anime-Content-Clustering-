@@ -61,33 +61,21 @@ def predict():
         text_blob = f"{synopsis} {genres}".strip()
         tfidf_vec = tfidf_vectorizer.transform([text_blob]).toarray()
         
-        # 3. THE FIX: Extract Numeric Features from the nested dictionary
+        # 3. Extract Numeric Features
         numeric_data = payload.get("numeric_features", {})
-        
         score = float(numeric_data.get("score", 0) or 0)
         episodes = float(numeric_data.get("episodes", 0) or 0)
         members = float(numeric_data.get("members", 0) or 0)
         popularity = float(numeric_data.get("popularity", 0) or 0)
         
-        numeric_arr = np.array([[score, episodes, members, popularity]])
+        # THE FIX: TFIDF provides 50 features. Scaler expects 55.
+        # We manually add a 0.0 here for the 5th missing numeric feature so the array stays aligned.
+        numeric_arr = np.array([[score, episodes, members, popularity, 0.0]])
         
-        # 4. Combine into one array
+        # 4. Combine into one array (Exactly 55 features)
         combined_features = np.hstack([tfidf_vec, numeric_arr])
         
-        # 5. DYNAMIC PADDING
-        # Your scaler wants exactly 55 features. We will force the array to be 55.
-        expected_features = standard_scaler.n_features_in_
-        actual_features = combined_features.shape[1]
-        
-        if actual_features < expected_features:
-            # Add zeros for any missing features (e.g., if we only have 54, add 1 zero)
-            padding = np.zeros((1, expected_features - actual_features))
-            combined_features = np.hstack([combined_features, padding])
-        elif actual_features > expected_features:
-            # Trim off extra features just in case
-            combined_features = combined_features[:, :expected_features]
-            
-        # 6. Scale -> PCA -> Predict
+        # 5. Scale -> PCA -> Predict
         scaled_features = standard_scaler.transform(combined_features)
         reduced = pca_transformer.transform(scaled_features)
         cluster = int(kmeans_model.predict(reduced)[0])
